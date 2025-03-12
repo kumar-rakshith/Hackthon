@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // To access URL parameters and navigation
+import { useParams } from 'react-router-dom'; // To access URL parameters
 
 function App() {
   const { departmentName } = useParams(); // Get department name from the URL
-  const navigate = useNavigate(); // Hook for navigation
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,8 +14,8 @@ function App() {
   const [updatedSubject, setUpdatedSubject] = useState('');
 
   useEffect(() => {
-    // Fetch data from backend
-    fetch("http://localhost:5000/data")
+    // Fetch data from backend (simulate with a fetch request)
+    fetch('http://localhost:5000/data') // Make sure your backend is running here
       .then((response) => response.json())
       .then((data) => {
         // Filter faculties based on department name
@@ -28,7 +27,7 @@ function App() {
         console.error("Error fetching data:", error);
         setLoading(false);
       });
-  }, [departmentName]); // Re-run the fetch whenever departmentName changes
+  }, [departmentName]);
 
   // Open modal with faculty details for update
   const openUpdateModal = (faculty) => {
@@ -54,44 +53,14 @@ function App() {
       subject: updatedSubject,
     };
 
-    // Send updated faculty data to the backend
-    fetch(`http://localhost:5000/data/${selectedFaculty.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updatedFaculty),
-    })
-    .then((response) => {
-      if (response.ok) {
-        // Update the faculty in the state without needing to reload the data
-        setData(data.map(faculty => faculty.id === selectedFaculty.id ? updatedFaculty : faculty));
-        closeModal();
-      } else {
-        console.error("Failed to update faculty");
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating faculty:", error);
-    });
+    // Update the faculty in the state (simulating the update on the frontend)
+    setData(data.map(faculty => faculty.id === selectedFaculty.id ? updatedFaculty : faculty));
+    closeModal();
   };
 
   const handleDelete = (id) => {
-    // Send a request to the backend to delete the faculty from the database
-    fetch(`http://localhost:5000/data/${id}`, {
-      method: 'DELETE',
-    })
-    .then((response) => {
-      if (response.ok) {
-        // Remove the faculty from the state to update the UI
-        setData(data.filter(faculty => faculty.id !== id));
-      } else {
-        console.error("Failed to delete the faculty");
-      }
-    })
-    .catch((error) => {
-      console.error("Error deleting faculty:", error);
-    });
+    // Remove the faculty from the state (simulating the delete operation on the frontend)
+    setData(data.filter(faculty => faculty.id !== id));
   };
 
   if (loading) {
@@ -130,7 +99,7 @@ function App() {
               
               {/* Delete Button */}
               <button
-                onClick={() => handleDelete(item.id)}
+                onClick={() => handleDelete(item.id)} // Delete faculty directly from the state
                 className="mt-2 w-full bg-red-500 hover:bg-red-400 text-white font-semibold p-2 rounded-md"
               >
                 Delete
@@ -189,13 +158,13 @@ function App() {
             </div>
             <div className="flex justify-between">
               <button
-                onClick={handleUpdate}
+                onClick={handleUpdate} // Update faculty in the state
                 className="bg-blue-500 hover:bg-blue-400 text-white font-semibold p-2 rounded-md"
               >
                 Update
               </button>
               <button
-                onClick={closeModal}
+                onClick={closeModal} // Close modal without saving
                 className="bg-gray-500 hover:bg-gray-400 text-white font-semibold p-2 rounded-md"
               >
                 Cancel

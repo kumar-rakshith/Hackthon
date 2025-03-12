@@ -50,8 +50,14 @@ const AdminDashboardLayout = ({ children }) => {
   };
 
   const handleLogout = () => {
-    // Logic for logout, e.g., clearing auth tokens, redirecting to login page, etc.
-    console.log("Logout clicked!");
+    const confirmLogout = window.confirm("Are you sure you want to logout?");
+    if (confirmLogout) {
+      // Clear any authentication data (e.g., remove tokens from localStorage)
+      // localStorage.removeItem('authToken'); // Example
+
+      // Navigate to the home page (or login page)
+      navigate("/"); // Or wherever you want to navigate after logout
+    }
   };
 
   return (
