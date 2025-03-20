@@ -27,6 +27,8 @@ import AddAttendees from "./component/Faculty/AddAttendees";
 import InternalMarks from "./component/Faculty/InternalMarks";
 import TimeTable from './component/Faculty/TimeTable';
 import Report from './component/Faculty/Report';
+// import AddAttendeesdemo from "./component/Faculty/AddAttendeesdemo";
+// import InternalMarksdemo from "./component/Faculty/InternalMarksdemo";
 
 
 //Student 
@@ -126,11 +128,24 @@ const App = () => {
         } />
 
 
+        {/* <Route path="/faculty/batch/AddAttendeesdemo" element={
+          <FacultyLayout>
+            <AddAttendeesdemo />
+          </FacultyLayout>
+        } /> */}
+
+
         <Route path="/faculty/batch/InternalMarks" element={
           <FacultyLayout>
             <InternalMarks />
           </FacultyLayout>
         } />
+
+        {/* <Route path="/faculty/batch/InternalMarksdemo" element={
+          <FacultyLayout>
+            <InternalMarksdemo />
+          </FacultyLayout>
+        } /> */}
 
 
         <Route path="/faculty/batch/timetabel" element={

@@ -7,6 +7,7 @@ const departmentRoutes = require("./routes/departmentRoutes");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
 const moment = require('moment');
+const lec = require('./routes/lec.js');
 
 const app = express();
 
@@ -16,6 +17,8 @@ app.use(bodyParser.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/lec", lec);
+
 
 app.get("/api/departments", async (req, res) => {
   const query = "SELECT * FROM departments";
@@ -182,50 +185,82 @@ app.post("/marks", (req, res) => {
 
 app.get("/attendance-report", async (req, res) => {
   try {
-    const [attendanceData] = await pool.query("SELECT * FROM attendance");
-    const format = req.query.format;
+    const { format } = req.query;
+
+    // Query to get student names, total attendance, and number of present days
+    const [attendanceData] = await pool.query(`
+      SELECT 
+        students.id,
+        students.name,
+        COUNT(CASE WHEN attendancedemo.status = 'Present' THEN 1 END) AS present_days,
+        COUNT(attendancedemo.status) AS total_days
+      FROM attendancedemo
+      JOIN students ON attendancedemo.student_id = students.id
+      GROUP BY students.id
+    `);
+
+    // Calculate attendance percentage for each student
+    const attendanceWithPercentage = attendanceData.map((row) => {
+      const percentage = ((row.present_days / row.total_days) * 100).toFixed(2);
+      return {
+        ...row,
+        percentage,
+      };
+    });
 
     if (format === "excel") {
+      const ExcelJS = require('exceljs');
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Attendance");
+
       worksheet.columns = [
-        { header: "Student ID", key: "student_id" },
-        { header: "Date", key: "date" },
-        { header: "Status", key: "status" },
+        { header: "Student ID", key: "id", width: 12 },
+        { header: "Student Name", key: "name", width: 30 },
+        { header: "Total Days", key: "total_days", width: 12 },
+        { header: "Present Days", key: "present_days", width: 12 },
+        { header: "Attendance Percentage", key: "percentage", width: 20 },
       ];
 
-      worksheet.addRows(attendanceData);
+      // Apply bold style to header row
+      worksheet.getRow(1).font = { bold: true };
 
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=attendance-report.xlsx"
-      );
+      // Add rows with attendance data
+      worksheet.addRows(attendanceWithPercentage);
+
+      // Add borders to the table cells
+      worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=attendance-report.xlsx");
 
       await workbook.xlsx.write(res);
       res.end();
     } else if (format === "pdf") {
+      const PDFDocument = require('pdfkit');
       const doc = new PDFDocument();
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=attendance-report.pdf"
-      );
+      res.setHeader("Content-Disposition", "attachment; filename=attendance-report.pdf");
 
       doc.pipe(res);
       doc.fontSize(18).text("Attendance Report", { align: "center" });
 
-      // Adding table header
-      doc.moveDown();
-      doc.fontSize(12).text("Student ID   |   Date   |   Status");
+      // Table headers
+      doc.moveDown().fontSize(12).text("Student ID   |   Name   |   Total Days   |   Present Days   |   Attendance %");
       doc.moveDown();
 
-      // Adding table rows
-      attendanceData.forEach((row) => {
-        doc.text(`${row.student_id}   |   ${row.date}   |   ${row.status}`);
+      // Adding table rows with alignment
+      attendanceWithPercentage.forEach((row) => {
+        doc.text(`${row.id}        |   ${row.name}      |   ${row.total_days}       |   ${row.present_days}        |   ${row.percentage}%`);
+        doc.moveDown();
       });
 
       doc.end();
@@ -241,62 +276,88 @@ app.get("/attendance-report", async (req, res) => {
   }
 });
 
+
+
 app.get("/marks-report", async (req, res) => {
   try {
-    const [marksData] = await pool.query("SELECT * FROM marks");
-    const format = req.query.format;
+    const { format } = req.query;
+
+    // Query to get student names and marks for each student
+    const [marksData] = await pool.query(`
+      SELECT 
+        students.id AS student_id,
+        students.name AS student_name,
+        marksdemo.IA1, 
+        marksdemo.IA2, 
+        marksdemo.assignment1,
+        marksdemo.assignment2,
+        marksdemo.QA1,
+        marksdemo.QA2,
+        marksdemo.finalMarks
+      FROM marksdemo
+      JOIN students ON marksdemo.student_id = students.id
+    `);
 
     if (format === "excel") {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Marks");
+      const worksheet = workbook.addWorksheet("Marks Report");
 
       worksheet.columns = [
-        { header: "Student ID", key: "student_id" },
-        { header: "Subject1", key: "subject1" },
-        { header: "Subject2", key: "subject2" },
-        { header: "Subject3", key: "subject3" },
-        { header: "Subject4", key: "subject4" },
-        { header: "Subject5", key: "subject5" },
+        { header: "Student ID", key: "student_id", width: 12 },
+        { header: "Student Name", key: "student_name", width: 30 },
+        { header: "IA1 Marks", key: "IA1", width: 12 },
+        { header: "IA2 Marks", key: "IA2", width: 12 },
+        { header: "Assignment 1", key: "assignment1", width: 12 },
+        { header: "Assignment 2", key: "assignment2", width: 12 },
+        { header: "QA1 Marks", key: "QA1", width: 12 },
+        { header: "QA2 Marks", key: "QA2", width: 12 },
+        { header: "Final Marks", key: "finalMarks", width: 12 },
       ];
 
+      // Apply bold style to header row
+      worksheet.getRow(1).font = { bold: true };
+
+      // Add rows with marks data
       worksheet.addRows(marksData);
 
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=marks-report.xlsx"
-      );
+      // Add borders to the table cells
+      worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+
+      // Set headers for the response and send the Excel file
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=marks-report.xlsx");
 
       await workbook.xlsx.write(res);
       res.end();
     } else if (format === "pdf") {
       const doc = new PDFDocument();
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        "attachment; filename=marks-report.pdf"
-      );
+      res.setHeader("Content-Disposition", "attachment; filename=marks-report.pdf");
 
       doc.pipe(res);
       doc.fontSize(18).text("Marks Report", { align: "center" });
 
-      // Adding table header
-      doc.moveDown();
-      doc
-        .fontSize(12)
-        .text(
-          "Student ID   |   Subject1   |   Subject2  |   Subject3   |   subject4  |     subject5"
-        );
+      // Table headers
+      doc.moveDown().fontSize(12).text(
+        "Student ID   |   Name   |   IA1   |   IA2   |   Assignment 1   |   Assignment 2   |   QA1   |   QA2   |   Final Marks"
+      );
       doc.moveDown();
 
-      // Adding table rows
+      // Adding table rows with marks data
       marksData.forEach((row) => {
         doc.text(
-          `${row.student_id}   |   ${row.subject1}   |   ${row.subject2}   |     ${row.subject3}   |     ${row.subject4}   | ${row.subject5}`
+          `${row.student_id}   |   ${row.student_name}   |   ${row.IA1}   |   ${row.IA2}   |   ${row.assignment1}   |   ${row.assignment2}   |   ${row.QA1}   |   ${row.QA2}   |   ${row.finalMarks}`
         );
+        doc.moveDown();
       });
 
       doc.end();

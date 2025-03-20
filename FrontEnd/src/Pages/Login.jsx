@@ -99,9 +99,7 @@ const UserLogin = () => {
             >
               <option value="" disabled></option>
               <option value="admin">Admin</option>
-              <option value="hod">HOD</option>
               <option value="faculty">Faculty</option>
-              <option value="exam_department">Exam Department</option>
               <option value="student">Student</option>
             </select>
             <label

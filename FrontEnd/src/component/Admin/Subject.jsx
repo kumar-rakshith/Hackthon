@@ -141,17 +141,17 @@ const ViewBatches = () => {
               </div>
             ))}
             <div className="flex space-x-4 mt-4">
-              <button
+              {/* <button
                 onClick={handleAddSubjects}
                 className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition duration-200"
               >
                 Add Subjects
-              </button>
+              </button> */}
               <button
                 onClick={handleUpdateSubjects}
-                className="bg-yellow-500 text-white p-2 rounded-lg hover:bg-yellow-600 transition duration-200"
+                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition duration-200"
               >
-                Update Subjects
+                Add Subjects
               </button>
             </div>
           </div>
